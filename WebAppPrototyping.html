@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Include JS Beautify library for code formatting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.15.1/beautify.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.15.1/beautify-css.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.15.1/beautify-html.js"></script>
+    <title>Web App Prototyping</title>
+    <style>
+        /* Main layout styles */
+        body {
+            display: flex;
+            margin: 0;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+        
+        /* Editor styles */
+        .editor {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            box-sizing: border-box;
+            background-color: #f0f0f0;
+        }
+        .editor textarea {
+            width: 100%;
+            height: 33%;
+            margin-bottom: 10px;
+            padding: 10px;
+            box-sizing: border-box;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        
+        /* Output area styles */
+        .output {
+            width: 50%;
+            padding: 10px;
+            box-sizing: border-box;
+            border-left: 1px solid #ddd;
+        }
+        
+        /* Button container styles */
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .run-btn, .download-btn {
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 48%;
+        }
+        
+        /* Output iframe styles */
+        iframe {
+            width: 100%;
+            height: calc(100% - 200px);
+            border: 1px solid black;
+            background: #fff;
+        }
+        
+        /* Utility button styles */
+        .util-btn {
+            width: 20%;
+        }
+        
+        /* Console output styles */
+        .console {
+            width: 100%;
+            height: 150px;
+            padding: 5px;
+            box-sizing: border-box;
+            background-color: #000;
+            color: #00ff00;
+            font-family: monospace;
+            overflow-y: auto;
+        }
+        .clear-btn {
+            padding: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Editor section -->
+    <div class="editor">
+        <!-- HTML editor -->
+        <button class="util-btn" onclick="htmlfix()">Format HTML</button>
+        <textarea id="html" placeholder="HTML"></textarea>
+        
+        <!-- CSS editor -->
+        <button class="util-btn" onclick="cssfix()">Format CSS</button>
+        <textarea id="css" placeholder="CSS"></textarea>
+        
+        <!-- JavaScript editor -->
+        <button class="util-btn" onclick="jsfix()">Format JavaScript</button>
+        <textarea id="js" placeholder="JavaScript"></textarea>
+        
+        <!-- Action buttons -->
+        <div class="button-container">
+            <button class="run-btn" onclick="runCode()">Run</button>
+            <button class="download-btn" onclick="downloadHTML()">Download HTML</button>
+        </div>
+    </div>
+    
+    <!-- Output section -->
+    <div class="output">
+        <b>Output:</b><br/>
+        <iframe id="output"></iframe>
+        <button class="clear-btn" onclick="clearConsole()">Clear Console</button>
+        <div class="console" id="console"></div>
+    </div>
+
+    <script>
+        // Function to run the code in the iframe
+        function runCode() {
+            const htmlCode = document.getElementById('html').value;
+            const cssCode = document.getElementById('css').value;
+            const jsCode = document.getElementById('js').value;
+
+            const iframe = document.getElementById('output');
+            const iframeDocument = iframe.contentDocument || iframe.contentWindow.document;
+
+            // Redirect console logs to custom console
+            const consoleOutput = document.getElementById('console');
+            iframe.contentWindow.console.log = function(message) {
+                const msg = document.createElement('div');
+                msg.textContent = message;
+                consoleOutput.appendChild(msg);
+            };
+
+            // Write the combined code to the iframe
+            iframeDocument.open();
+            iframeDocument.write(`
+                <style>${cssCode}</style>
+                ${htmlCode}
+                <script>
+                    (function() {
+                        const originalConsoleLog = console.log;
+                        console.log = function(message) {
+                            parent.document.getElementById('console').appendChild(document.createElement('div')).textContent = message;
+                            originalConsoleLog.apply(console, arguments);
+                        };
+                    })();
+                    ${jsCode}
+                <\/script>
+            `);
+            iframeDocument.close();
+        }
+
+        // Function to format HTML code
+        function htmlfix() {
+            var htmlDisp = document.getElementById('html').value;
+            document.getElementById('html').value = html_beautify(htmlDisp);
+        }
+
+        // Function to format CSS code
+        function cssfix() {
+            var cssDisp = document.getElementById('css').value;
+            document.getElementById('css').value = css_beautify(cssDisp);
+        }
+
+        // Function to format JavaScript code
+        function jsfix() {
+            var jsDisp = document.getElementById('js').value;
+            document.getElementById('js').value = js_beautify(jsDisp);
+        }
+
+        // Function to clear the console
+        function clearConsole() {
+            const consoleOutput = document.getElementById('console');
+            consoleOutput.innerHTML = '';
+        }
+
+        // Function to download the HTML file
+        function downloadHTML() {
+            const htmlCode = document.getElementById('html').value;
+            const cssCode = document.getElementById('css').value;
+            const jsCode = document.getElementById('js').value;
+
+            // Combine all code into a single HTML file
+            const fullHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Downloaded Web App</title>
+    <style>
+${cssCode}
+    </style>
+</head>
+<body>
+${htmlCode}
+    <script>
+${jsCode}
+    <\/script>
+</body>
+</html>`;
+
+            // Create a blob and download the file
+            const blob = new Blob([fullHTML], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'web_app.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>
